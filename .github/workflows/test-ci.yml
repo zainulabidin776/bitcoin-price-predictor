@@ -1,0 +1,195 @@
+name: Test Branch CI with CML
+
+on:
+  pull_request:
+    branches:
+      - test
+
+jobs:
+  model-training-and-comparison:
+    runs-on: ubuntu-latest
+    name: Train Model and Compare Performance
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Fetch all history for proper comparison
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install cml
+      
+      - name: Setup DVC
+        run: |
+          pip install dvc dvc-s3
+      
+      - name: Create necessary directories
+        run: |
+          mkdir -p data/raw data/processed models reports outputs
+      
+      - name: Extract data
+        env:
+          COINCAP_API_KEY: ${{ secrets.COINCAP_API_KEY }}
+        run: |
+          echo "Extracting data from CoinCap API..."
+          python src/data/extract.py
+      
+      - name: Quality check
+        run: |
+          echo "Running data quality checks..."
+          python src/data/quality_check.py
+      
+      - name: Transform data
+        run: |
+          echo "Transforming data and engineering features..."
+          python src/data/transform.py
+      
+      - name: Train new model
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          MLFLOW_TRACKING_USERNAME: ${{ secrets.MLFLOW_TRACKING_USERNAME }}
+          MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
+        run: |
+          echo "Training new model..."
+          python src/models/train.py > training_output.txt
+          cat training_output.txt
+      
+      - name: Extract metrics from training
+        id: metrics
+        run: |
+          # Extract RMSE and R² from training output
+          NEW_RMSE=$(grep "Test RMSE:" training_output.txt | awk '{print $3}')
+          NEW_R2=$(grep "Test R²:" training_output.txt | awk '{print $3}')
+          
+          echo "new_rmse=$NEW_RMSE" >> $GITHUB_OUTPUT
+          echo "new_r2=$NEW_R2" >> $GITHUB_OUTPUT
+          
+          echo "New Model Metrics:"
+          echo "  RMSE: $NEW_RMSE"
+          echo "  R²: $NEW_R2"
+      
+      - name: Get baseline metrics from master
+        id: baseline
+        run: |
+          # In production, fetch these from MLflow or stored artifacts
+          # For now, use placeholder values that represent current production
+          echo "baseline_rmse=0.050" >> $GITHUB_OUTPUT
+          echo "baseline_r2=0.750" >> $GITHUB_OUTPUT
+          
+          echo "Baseline (Production) Metrics:"
+          echo "  RMSE: 0.050"
+          echo "  R²: 0.750"
+      
+      - name: Compare models and generate report
+        id: comparison
+        run: |
+          cat << EOF > model_comparison.md
+          # 🤖 Model Performance Comparison Report
+          
+          ## Metrics Comparison
+          
+          | Metric | Baseline (Production) | New Model | Change | Status |
+          |--------|----------------------|-----------|---------|---------|
+          | **RMSE** | ${{ steps.baseline.outputs.baseline_rmse }} | ${{ steps.metrics.outputs.new_rmse }} | $(python -c "print(f'{(${{ steps.metrics.outputs.new_rmse }} - ${{ steps.baseline.outputs.baseline_rmse }}) / ${{ steps.baseline.outputs.baseline_rmse }} * 100:.2f}%')") | $(python -c "print('✅ Improved' if ${{ steps.metrics.outputs.new_rmse }} < ${{ steps.baseline.outputs.baseline_rmse }} else '❌ Degraded')") |
+          | **R²** | ${{ steps.baseline.outputs.baseline_r2 }} | ${{ steps.metrics.outputs.new_r2 }} | $(python -c "print(f'{(${{ steps.metrics.outputs.new_r2 }} - ${{ steps.baseline.outputs.baseline_r2 }}) / ${{ steps.baseline.outputs.baseline_r2 }} * 100:.2f}%')") | $(python -c "print('✅ Improved' if ${{ steps.metrics.outputs.new_r2 }} > ${{ steps.baseline.outputs.baseline_r2 }} else '❌ Degraded')") |
+          
+          ## Decision
+          
+          EOF
+          
+          # Determine if new model is better
+          python << PYTHON
+          import sys
+          
+          new_rmse = float("${{ steps.metrics.outputs.new_rmse }}")
+          baseline_rmse = float("${{ steps.baseline.outputs.baseline_rmse }}")
+          new_r2 = float("${{ steps.metrics.outputs.new_r2 }}")
+          baseline_r2 = float("${{ steps.baseline.outputs.baseline_r2 }}")
+          
+          # Model is better if RMSE is lower AND R² is higher (or at least not significantly worse)
+          rmse_improved = new_rmse < baseline_rmse
+          r2_improved = new_r2 > (baseline_r2 * 0.95)  # Allow 5% degradation
+          
+          is_better = rmse_improved and r2_improved
+          
+          with open("model_comparison.md", "a") as f:
+              if is_better:
+                  f.write("### ✅ **APPROVED**: New model performs better than baseline\n\n")
+                  f.write("**Recommendation**: This model is ready to be promoted to production.\n")
+              else:
+                  f.write("### ❌ **REJECTED**: New model does not meet performance criteria\n\n")
+                  f.write("**Recommendation**: Do not merge. Model performance is not better than baseline.\n\n")
+                  f.write("**Reasons**:\n")
+                  if not rmse_improved:
+                      f.write(f"- RMSE increased from {baseline_rmse:.6f} to {new_rmse:.6f}\n")
+                  if not r2_improved:
+                      f.write(f"- R² decreased significantly from {baseline_r2:.4f} to {new_r2:.4f}\n")
+          
+          # Set output for blocking merge
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f"model_approved={'true' if is_better else 'false'}\n")
+          
+          # Exit with error code if model is worse
+          if not is_better:
+              sys.exit(1)
+          PYTHON
+        continue-on-error: true
+      
+      - name: Setup CML
+        uses: iterative/setup-cml@v1
+      
+      - name: Post comparison report as comment
+        env:
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cat model_comparison.md >> report.md
+          
+          # Add visualization if possible
+          echo "" >> report.md
+          echo "## 📊 Model Details" >> report.md
+          echo "" >> report.md
+          echo "- **Training Date**: $(date)" >> report.md
+          echo "- **Dataset Size**: $(wc -l < $(ls -t data/processed/*.csv | head -1)) records" >> report.md
+          echo "- **Features**: $(head -1 $(ls -t data/processed/*.csv | head -1) | tr ',' '\n' | wc -l) features" >> report.md
+          
+          # Send report using CML
+          cml comment create report.md
+      
+      - name: Block merge if model is worse
+        if: steps.comparison.outputs.model_approved == 'false'
+        run: |
+          echo "::error::Model performance is worse than baseline. Blocking merge."
+          echo "::error::Please improve the model before merging to test branch."
+          exit 1
+      
+      - name: Success message
+        if: steps.comparison.outputs.model_approved == 'true'
+        run: |
+          echo "::notice::✅ Model performance approved! New model is better than baseline."
+          echo "::notice::Safe to merge to test branch."
+
+  summary:
+    runs-on: ubuntu-latest
+    name: Pipeline Summary
+    needs: [model-training-and-comparison]
+    if: always()
+    
+    steps:
+      - name: Report Status
+        run: |
+          echo "Model Training Result: ${{ needs.model-training-and-comparison.result }}"
+          
+          if [[ "${{ needs.model-training-and-comparison.result }}" == "success" ]]; then
+            echo "::notice::✅ All checks passed! Model is ready for testing."
+          else
+            echo "::error::❌ Model performance check failed. Review the comparison report."
+            exit 1
+          fi

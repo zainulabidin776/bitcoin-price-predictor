@@ -1,0 +1,42 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'mlops-crypto-monitor'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+# Load rules once and periodically evaluate them
+rule_files:
+  # - "alerts.yml"
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # FastAPI Prediction Service
+  - job_name: 'crypto-prediction-api'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['api:8000']
+    scrape_interval: 10s
+    scrape_timeout: 5s
+
+  # Airflow (if metrics are exposed)
+  - job_name: 'airflow'
+    static_configs:
+      - targets: ['airflow-webserver:8080']
+    metrics_path: '/admin/metrics'
+    scrape_interval: 30s
+
+  # Node exporter for system metrics (optional)
+  # - job_name: 'node'
+  #   static_configs:
+  #     - targets: ['node-exporter:9100']

@@ -1,0 +1,148 @@
+{
+  "dashboard": {
+    "title": "Crypto Volatility Prediction - Model Monitoring",
+    "tags": ["mlops", "crypto", "monitoring"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "API Request Rate",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "rate(http_requests_total[5m])",
+            "legendFormat": "{{method}} {{endpoint}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"label": "Requests/sec", "show": true},
+          {"show": true}
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Prediction Latency (95th Percentile)",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(prediction_latency_seconds_bucket[5m]))",
+            "legendFormat": "P95 Latency",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"label": "Seconds", "show": true},
+          {"show": true}
+        ],
+        "alert": {
+          "name": "High Prediction Latency",
+          "conditions": [
+            {
+              "evaluator": {"params": [0.5], "type": "gt"},
+              "operator": {"type": "and"},
+              "query": {"params": ["A", "5m", "now"]},
+              "reducer": {"params": [], "type": "avg"},
+              "type": "query"
+            }
+          ],
+          "frequency": "1m",
+          "handler": 1,
+          "message": "Prediction latency exceeded 500ms threshold",
+          "noDataState": "no_data",
+          "notifications": []
+        }
+      },
+      {
+        "id": 3,
+        "title": "Data Drift Ratio",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "data_drift_ratio",
+            "legendFormat": "Drift Ratio",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"label": "Ratio", "show": true},
+          {"show": true}
+        ],
+        "thresholds": [
+          {
+            "value": 0.15,
+            "colorMode": "critical",
+            "fill": true,
+            "line": true,
+            "op": "gt"
+          }
+        ],
+        "alert": {
+          "name": "High Data Drift",
+          "conditions": [
+            {
+              "evaluator": {"params": [0.15], "type": "gt"},
+              "operator": {"type": "and"},
+              "query": {"params": ["A", "5m", "now"]},
+              "reducer": {"params": [], "type": "last"},
+              "type": "query"
+            }
+          ],
+          "frequency": "5m",
+          "handler": 1,
+          "message": "Data drift ratio exceeded threshold of 0.15",
+          "noDataState": "no_data",
+          "notifications": []
+        }
+      },
+      {
+        "id": 4,
+        "title": "Model Prediction Values",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+        "targets": [
+          {
+            "expr": "model_prediction_value",
+            "legendFormat": "Prediction",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"label": "Volatility", "show": true},
+          {"show": true}
+        ]
+      },
+      {
+        "id": 5,
+        "title": "HTTP Status Code Distribution",
+        "type": "piechart",
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 16},
+        "targets": [
+          {
+            "expr": "sum by (status) (http_requests_total)",
+            "legendFormat": "{{status}}",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Out-of-Distribution Features",
+        "type": "table",
+        "gridPos": {"h": 8, "w": 16, "x": 8, "y": 16},
+        "targets": [
+          {
+            "expr": "topk(10, feature_ood_total)",
+            "legendFormat": "{{feature_name}}",
+            "refId": "A"
+          }
+        ]
+      }
+    ],
+    "refresh": "10s",
+    "time": {"from": "now-1h", "to": "now"}
+  }
+}
