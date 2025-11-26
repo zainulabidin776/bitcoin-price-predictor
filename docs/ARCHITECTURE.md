@@ -11,7 +11,7 @@
 └─────────────────────────────────────────────────────────────────────────────┘
 
     ┌─────────────┐
-    │  CoinCap    │  ◄─── Live cryptocurrency market data
+    │ CryptoCompare│  ◄─── Live cryptocurrency market data
     │     API     │       (BTC price, volume, market data)
     │  (Real-time)│
     └──────┬──────┘
@@ -160,7 +160,7 @@
 ║  KEY FEATURES                                                                  ║
 ╠═══════════════════════════════════════════════════════════════════════════════╣
 ║                                                                                ║
-║  ✅ Real-time data ingestion from CoinCap API                                 ║
+║  ✅ Real-time data ingestion from CryptoCompare API                           ║
 ║  ✅ Mandatory quality gates (fails pipeline if bad data)                      ║
 ║  ✅ Comprehensive feature engineering (36 features)                           ║
 ║  ✅ Experiment tracking with MLflow & DagHub                                  ║

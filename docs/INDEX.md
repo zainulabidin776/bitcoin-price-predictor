@@ -9,10 +9,10 @@ This is your **complete, production-ready MLOps pipeline** for cryptocurrency vo
 ## 🎯 What is This?
 
 A fully implemented MLOps system that predicts Bitcoin price volatility using:
-- Real-time data from CoinCap API
+- Real-time data from CryptoCompare API (free tier, no key required)
 - Apache Airflow for orchestration
-- MLflow for experiment tracking
-- Docker for deployment
+- MLflow for experiment tracking (DagHub)
+- Docker Compose for deployment
 - Prometheus + Grafana for monitoring
 - Complete CI/CD with GitHub Actions
 
@@ -49,7 +49,7 @@ Read in this order:
 | File | Purpose | When to Read |
 |------|---------|--------------|
 | **PROJECT_SUMMARY.md** | Quick overview, tips, troubleshooting | First! Start here |
-| **COINCAP_API_GUIDE.md** | CoinCap Pro API documentation | To understand the API |
+| **API Documentation** | CryptoCompare API (Free tier) | No key required, 100K calls/month |
 | **QUICKSTART.md** | 5-minute setup guide | To get running fast |
 | **README.md** | Complete documentation (350+ lines) | For full details |
 | **ARCHITECTURE.md** | Visual system architecture | To understand design |
@@ -104,7 +104,7 @@ mlops-rps-crypto/
 **YES!** This project includes:
 
 ### Phase I: Data Ingestion ✅
-- CoinCap API integration
+- CryptoCompare API integration (Free, no key required)
 - Airflow orchestration
 - Mandatory quality gates
 - Feature engineering (36 features)
@@ -208,14 +208,23 @@ mlops-rps-crypto/
 ### Quick Fixes
 ```bash
 # Services won't start?
-docker-compose down
-docker-compose up -d
+docker compose down
+docker compose up --build
 
-# Check logs
-docker-compose logs
+# Check logs for errors
+docker compose logs
+
+# Check specific service
+docker compose logs airflow-init
+docker compose logs airflow-webserver
 
 # Restart a service
-docker-compose restart <service-name>
+docker compose restart airflow-webserver
+docker compose restart airflow-scheduler
+
+# Complete restart (removes volumes - WARNING: deletes data)
+docker compose down -v
+docker compose up --build
 ```
 
 ### Documentation
@@ -224,23 +233,47 @@ docker-compose restart <service-name>
 - **PROJECT_SUMMARY.md** - Tips & tricks
 
 ### Common Issues
-- **Port conflicts**: Change ports in docker-compose.yml
-- **Memory**: Ensure 8GB+ RAM available
-- **Permissions**: Run with sudo if needed
+
+**Port 8080 already in use:**
+- Solution: Airflow is configured to use port 8081
+- Access at: http://localhost:8081
+- Or change port mapping in docker-compose.yml line 67
+
+**Airflow init fails:**
+- Check logs: `docker compose logs airflow-init`
+- Common cause: Already fixed - `_PIP_ADDITIONAL_REQUIREMENTS` is commented out
+- If you see pip install errors, the fix is already applied
+
+**Services show "Up" but can't access:**
+- Wait 2-3 minutes for full initialization
+- Check service logs: `docker compose logs <service-name>`
+- Verify health: `docker compose ps`
+
+**Memory issues:**
+- Ensure 8GB+ RAM available
+- Close other applications
+- Restart Docker Desktop
+
+**Permissions (Linux/Mac):**
+- Run with sudo if needed
+- Or add user to docker group
 
 ---
 
 ## 📋 Before Submission
 
 Make sure you've:
-- [ ] Run `./setup.sh` successfully
-- [ ] Verified all services are running
-- [ ] Tested the API endpoints
-- [ ] Configured DagHub credentials
-- [ ] Pushed code to GitHub
-- [ ] Added GitHub Actions secrets
-- [ ] Pushed Docker image (optional)
-- [ ] Read SUBMISSION.md
+- [ ] Created `.env` file with all required variables
+- [ ] Started Docker Compose: `docker compose up --build`
+- [ ] Verified all 8 services are running: `docker compose ps`
+- [ ] Accessed Airflow UI: http://localhost:8081 (admin/admin)
+- [ ] Enabled and triggered the DAG in Airflow
+- [ ] Tested the API endpoints: http://localhost:8000/docs
+- [ ] Verified DagHub credentials in `.env`
+- [ ] Checked Grafana dashboard: http://localhost:3000
+- [ ] Pushed code to GitHub (if using version control)
+- [ ] Added GitHub Actions secrets (if using CI/CD)
+- [ ] Read SUBMISSION.md for final checklist
 
 ---
 
@@ -267,31 +300,49 @@ Make sure you've:
 ## 📞 Quick Reference
 
 ### Access URLs
-- **Airflow**: http://localhost:8080 (admin/admin)
-- **MinIO**: http://localhost:9001 (minioadmin/minioadmin123)
+- **Airflow**: http://localhost:8081 (admin/admin) - *Note: Port 8081 if 8080 is in use*
+- **MinIO Console**: http://localhost:9001 (minioadmin/minioadmin123)
+- **MinIO API**: http://localhost:9000
 - **Prometheus**: http://localhost:9090
 - **Grafana**: http://localhost:3000 (admin/admin)
-- **API**: http://localhost:8000
+- **FastAPI Docs**: http://localhost:8000/docs
+- **FastAPI Health**: http://localhost:8000/health
 
 ### Quick Commands
 ```bash
-# Start everything
-docker-compose up -d
+# Start everything (builds and starts all services)
+docker compose up --build
 
-# Check status
-docker-compose ps
+# Or in background mode
+docker compose up -d --build
 
-# View logs
-docker-compose logs -f
+# Check status of all services
+docker compose ps
+
+# View logs (all services)
+docker compose logs
+
+# View specific service logs
+docker compose logs airflow-webserver
+docker compose logs airflow-scheduler
+
+# Follow logs in real-time
+docker compose logs -f
 
 # Stop everything
-docker-compose down
+docker compose down
 
-# Run tests
+# Stop and remove volumes (WARNING: deletes data)
+docker compose down -v
+
+# Run tests (if Python environment is set up)
 pytest tests/ -v
 
-# Test API
+# Test API health
 curl http://localhost:8000/health
+
+# Test API docs
+# Open browser: http://localhost:8000/docs
 ```
 
 ---

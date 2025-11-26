@@ -38,20 +38,21 @@ dag = DAG(
 # ============================================================================
 
 def extract_data(**context):
-    """Task 1: Extract data from CoinCap API"""
+    """Task 1: Extract data from CryptoCompare API (Free - No key required)"""
     import sys
     sys.path.insert(0, '/opt/airflow/src')
     
-    from data.extract import CoinCapExtractor
+    from data.extract import CryptoCompareExtractor
     
-    extractor = CoinCapExtractor()
-    
-    # Validate connection
-    if not extractor.validate_api_connection():
-        raise ConnectionError("Failed to connect to CoinCap API")
+    # Initialize CryptoCompare extractor (free API, no key needed)
+    extractor = CryptoCompareExtractor()
     
     # Extract and save data
-    output_path = extractor.extract_and_save()
+    # Note: CryptoCompare API doesn't require validation, it's free and public
+    output_path = extractor.extract_and_save(output_dir='/opt/airflow/data/raw')
+    
+    if not output_path:
+        raise ValueError("Failed to extract data from CryptoCompare API")
     
     # Push to XCom for next task
     context['ti'].xcom_push(key='raw_data_path', value=output_path)

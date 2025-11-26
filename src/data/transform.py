@@ -35,14 +35,30 @@ class CryptoFeatureEngineer:
         """Load and prepare raw data"""
         df = pd.read_csv(file_path)
         
-        # Ensure datetime
+        # Handle different column name formats (CryptoCompare uses 'timestamp', old format used 'date')
+        if 'timestamp' in df.columns and 'date' not in df.columns:
+            df['date'] = pd.to_datetime(df['timestamp'])
+            # Drop timestamp column if it exists (keep only date)
+            if 'timestamp' in df.columns:
+                df = df.drop(columns=['timestamp'])
+        elif 'date' in df.columns:
+            df['date'] = pd.to_datetime(df['date'])
+        else:
+            raise ValueError("Data must contain either 'timestamp' or 'date' column")
+        
+        # Handle different price column names (CryptoCompare uses 'close', old format used 'priceUsd')
+        if 'close' in df.columns and 'priceUsd' not in df.columns:
+            df['priceUsd'] = pd.to_numeric(df['close'], errors='coerce')
+        elif 'priceUsd' not in df.columns:
+            raise ValueError("Data must contain either 'close' or 'priceUsd' column")
+        
+        # Ensure datetime and numeric
         df['date'] = pd.to_datetime(df['date'])
+        df['priceUsd'] = pd.to_numeric(df['priceUsd'], errors='coerce')
         df = df.sort_values('date').reset_index(drop=True)
         
-        # Ensure numeric
-        df['priceUsd'] = pd.to_numeric(df['priceUsd'], errors='coerce')
-        
         logger.info(f"Loaded {len(df)} raw records")
+        logger.info(f"Columns: {df.columns.tolist()}")
         return df
     
     def create_price_features(self, df: pd.DataFrame) -> pd.DataFrame:

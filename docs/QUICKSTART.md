@@ -22,44 +22,84 @@ chmod +x setup.sh
 
 ### Step 2: Configure Environment
 
-Edit `.env` file with your credentials:
+Create `.env` file in project root with your credentials:
 
 ```bash
-# Required: CoinCap API Key
-COINCAP_API_KEY=your_api_key_here
+# CryptoCompare API (Free - No key required)
+DATA_SOURCE=cryptocompare
+CRYPTO_ASSET=BTC
+CRYPTO_CURRENCY=USD
 
 # Required: DagHub/MLflow (create free account at dagshub.com)
-MLFLOW_TRACKING_URI=https://dagshub.com/YOUR_USERNAME/mlops-rps-crypto.mlflow
+MLFLOW_TRACKING_URI=https://dagshub.com/YOUR_USERNAME/bitcoin-price-predictor.mlflow
 MLFLOW_TRACKING_USERNAME=your_dagshub_username
 MLFLOW_TRACKING_PASSWORD=your_dagshub_token
+
+# MinIO Configuration
+MINIO_ENDPOINT=localhost:9000
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin123
+MINIO_BUCKET=mlops-data
+
+# Airflow Configuration
+AIRFLOW__CORE__EXECUTOR=LocalExecutor
+AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
 ```
 
 ### Step 3: Start Services
 
 ```bash
-# Start all services
-docker-compose up -d
+# Navigate to project directory
+cd Bitcoin-MLOPS
 
-# Verify services are running
-docker-compose ps
+# Start all services (builds images and starts containers)
+docker compose up --build
+
+# Or run in background (detached mode)
+docker compose up -d --build
+
+# Wait 2-3 minutes for services to initialize
+# Especially wait for airflow-init to complete
+
+# Verify all services are running
+docker compose ps
 ```
+
+**Expected Services:**
+- ✅ postgres-1: Up (healthy)
+- ✅ airflow-init-1: Exited (0) - Normal, runs once
+- ✅ airflow-webserver-1: Up
+- ✅ airflow-scheduler-1: Up
+- ✅ minio-1: Up
+- ✅ prometheus-1: Up
+- ✅ grafana-1: Up
+- ✅ api-1: Up
 
 ### Step 4: Access Dashboards
 
-| Service | URL | Credentials |
-|---------|-----|-------------|
-| **Airflow** | http://localhost:8080 | admin / admin |
-| **MinIO** | http://localhost:9001 | minioadmin / minioadmin123 |
-| **Prometheus** | http://localhost:9090 | - |
-| **Grafana** | http://localhost:3000 | admin / admin |
-| **API** | http://localhost:8000 | - |
+**Wait 2-3 minutes** after starting services, then access:
+
+| Service | URL | Credentials | What to Check |
+|---------|-----|-------------|---------------|
+| **Airflow** | http://localhost:8081 | admin / admin | Should show DAGs page |
+| **MinIO Console** | http://localhost:9001 | minioadmin / minioadmin123 | Should show buckets |
+| **Prometheus** | http://localhost:9090 | - | Should show Prometheus UI |
+| **Grafana** | http://localhost:3000 | admin / admin | Should show login page |
+| **FastAPI Docs** | http://localhost:8000/docs | - | Should show Swagger UI |
+| **FastAPI Health** | http://localhost:8000/health | - | Should return JSON |
+
+**⚠️ Note:** If port 8080 is in use, Airflow uses port 8081 (configured in docker-compose.yml)
 
 ### Step 5: Run First Pipeline
 
-1. Go to Airflow UI: http://localhost:8080
-2. Find DAG: `crypto_volatility_pipeline`
-3. Click "Unpause" to enable it
-4. Click "Trigger DAG" to run manually
+1. **Open Airflow UI**: http://localhost:8081 (or http://localhost:8080)
+2. **Login**: Username: `admin`, Password: `admin`
+3. **Find DAG**: Look for `crypto_pipeline_dag` in the DAGs list
+4. **Enable DAG**: Toggle switch from OFF (gray) to ON (blue)
+5. **Trigger DAG**: Click the "Play" button (▶️) to run manually
+6. **Monitor**: Click on DAG name to see task execution in real-time
+
+**Expected Duration:** 10-15 minutes for full pipeline execution
 
 ---
 
@@ -134,24 +174,52 @@ git push origin feature/my-improvement
 
 ### Services won't start
 ```bash
-# Check logs
-docker-compose logs
+# Check logs for errors
+docker compose logs
+
+# Check specific service
+docker compose logs airflow-init
+docker compose logs airflow-webserver
 
 # Restart specific service
-docker-compose restart airflow-webserver
+docker compose restart airflow-webserver
 
 # Complete restart
-docker-compose down
-docker-compose up -d
+docker compose down
+docker compose up --build
+```
+
+### Airflow init fails
+```bash
+# Check init logs
+docker compose logs airflow-init
+
+# Common issue: Already fixed - _PIP_ADDITIONAL_REQUIREMENTS is commented out
+# If you see pip install errors, the fix is already in docker-compose.yml
+```
+
+### Airflow webserver port conflict
+```bash
+# Port 8080 already in use - Solution: Use port 8081
+# Access at: http://localhost:8081
+# Or change port in docker-compose.yml line 67
 ```
 
 ### Airflow DAG not appearing
 ```bash
-# Check DAG syntax
-python airflow/dags/crypto_pipeline_dag.py
+# Check scheduler logs
+docker compose logs airflow-scheduler
+
+# Verify DAG file exists
+dir airflow\dags\crypto_pipeline_dag.py
+
+# Check DAG syntax (if Python is available)
+python airflow\dags\crypto_pipeline_dag.py
 
 # Restart scheduler
-docker-compose restart airflow-scheduler
+docker compose restart airflow-scheduler
+
+# Wait 30 seconds, refresh Airflow UI
 ```
 
 ### API returns 503

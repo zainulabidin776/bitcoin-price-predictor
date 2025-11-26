@@ -6,14 +6,14 @@
 
 - [x] **Problem Selected**: Cryptocurrency Volatility Prediction
   - Domain: Financial
-  - API: CoinCap API 2.0 (Free, No rate limits)
+  - API: CryptoCompare API (Free, No key required, 100K calls/month)
   - Task: Predict BTC volatility 1 hour ahead
   - File: `src/data/extract.py`
 
 - [x] **Apache Airflow DAG Implementation**
   - File: `airflow/dags/crypto_pipeline_dag.py`
   - Schedule: Every 6 hours
-  - Extraction: Python operator connects to CoinCap API
+  - Extraction: Python operator connects to CryptoCompare API
   - Raw data saved with timestamp in `data/raw/`
 
 - [x] **Mandatory Quality Gate**
@@ -142,7 +142,7 @@
 
 ```
 ┌─────────────┐     ┌──────────────┐     ┌─────────────┐
-│  CoinCap    │────▶│   Airflow    │────▶│   MinIO     │
+│ CryptoCompare│────▶│   Airflow    │────▶│   MinIO     │
 │    API      │     │     DAG      │     │  (DVC)      │
 └─────────────┘     └──────────────┘     └─────────────┘
                            │                      │
@@ -252,7 +252,7 @@ chmod +x setup.sh
 ./setup.sh
 
 # 4. Access services
-# Airflow: http://localhost:8080
+# Airflow: http://localhost:8081 (or 8080 if port is free)
 # API: http://localhost:8000
 # Grafana: http://localhost:3000
 ```
@@ -339,7 +339,7 @@ To verify the project meets all requirements:
 
 ## 🏆 Project Highlights
 
-- **Zero-dependency API**: CoinCap API requires no authentication
+- **Zero-dependency API**: CryptoCompare API requires no authentication (free tier)
 - **Automated Quality Gates**: Pipeline fails fast on data issues
 - **Model Governance**: CML ensures only better models are deployed
 - **Complete Monitoring**: From data drift to API latency

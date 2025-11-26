@@ -21,6 +21,14 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import xgboost as xgb
 from dotenv import load_dotenv
 
+# DagHub integration for MLflow
+try:
+    import dagshub
+    DAGSHUB_AVAILABLE = True
+except ImportError:
+    DAGSHUB_AVAILABLE = False
+    print("Warning: dagshub not installed. Install with: pip install dagshub")
+
 load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
@@ -46,10 +54,59 @@ class CryptoVolatilityTrainer:
         self.setup_mlflow()
         
     def setup_mlflow(self):
-        """Configure MLflow tracking"""
-        tracking_uri = os.getenv('MLFLOW_TRACKING_URI')
+        """
+        Configure MLflow tracking with DagHub integration
         
-        if tracking_uri:
+        This method:
+        1. Initializes DagHub connection if MLFLOW_TRACKING_URI points to DagHub
+        2. Sets up MLflow tracking URI
+        3. Creates or gets the experiment
+        """
+        tracking_uri = os.getenv('MLFLOW_TRACKING_URI', '')
+        tracking_username = os.getenv('MLFLOW_TRACKING_USERNAME', '')
+        tracking_password = os.getenv('MLFLOW_TRACKING_PASSWORD', '')
+        
+        # Check if this is a DagHub URI
+        is_dagshub = 'dagshub.com' in tracking_uri.lower() if tracking_uri else False
+        
+        if is_dagshub and DAGSHUB_AVAILABLE:
+            try:
+                # Extract repo owner and name from URI
+                # Format: https://dagshub.com/owner/repo.mlflow
+                if tracking_uri:
+                    uri_parts = tracking_uri.replace('.mlflow', '').replace('https://', '').replace('http://', '').split('/')
+                    if len(uri_parts) >= 3:
+                        repo_owner = uri_parts[1]  # e.g., 'zainulabidin776'
+                        repo_name = uri_parts[2]   # e.g., 'bitcoin-price-predictor'
+                        
+                        logger.info("="*70)
+                        logger.info("INITIALIZING DAGSHUB MLFLOW INTEGRATION")
+                        logger.info("="*70)
+                        logger.info(f"Repository: {repo_owner}/{repo_name}")
+                        
+                        # Initialize DagHub - this automatically configures MLflow
+                        dagshub.init(
+                            repo_owner=repo_owner,
+                            repo_name=repo_name,
+                            mlflow=True
+                        )
+                        
+                        logger.info("✓ DagHub MLflow integration initialized successfully")
+                        logger.info(f"✓ MLflow tracking URI: {tracking_uri}")
+                        logger.info("="*70)
+                    else:
+                        logger.warning("Could not parse DagHub URI, falling back to direct MLflow setup")
+                        if tracking_uri:
+                            mlflow.set_tracking_uri(tracking_uri)
+                else:
+                    logger.warning("MLFLOW_TRACKING_URI not set")
+            except Exception as e:
+                logger.error(f"DagHub initialization error: {e}")
+                logger.info("Falling back to direct MLflow setup")
+                if tracking_uri:
+                    mlflow.set_tracking_uri(tracking_uri)
+        elif tracking_uri:
+            # Direct MLflow setup (not DagHub)
             mlflow.set_tracking_uri(tracking_uri)
             logger.info(f"MLflow tracking URI: {tracking_uri}")
         else:
@@ -60,15 +117,15 @@ class CryptoVolatilityTrainer:
             experiment = mlflow.get_experiment_by_name(self.experiment_name)
             if experiment is None:
                 experiment_id = mlflow.create_experiment(self.experiment_name)
-                logger.info(f"Created new experiment: {self.experiment_name}")
+                logger.info(f"Created new experiment: {self.experiment_name} (ID: {experiment_id})")
             else:
                 experiment_id = experiment.experiment_id
-                logger.info(f"Using existing experiment: {self.experiment_name}")
+                logger.info(f"Using existing experiment: {self.experiment_name} (ID: {experiment_id})")
             
             mlflow.set_experiment(self.experiment_name)
             
         except Exception as e:
-            logger.error(f"MLflow setup error: {e}")
+            logger.error(f"MLflow experiment setup error: {e}")
             logger.info("Continuing with local MLflow tracking")
     
     def load_processed_data(self, file_path: str) -> pd.DataFrame:

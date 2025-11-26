@@ -9,7 +9,7 @@ This is a **production-ready, complete MLOps pipeline** for cryptocurrency volat
 ## 📦 What's Included
 
 ### 1. **Complete Source Code** (All 4 Phases)
-- ✅ Phase I: Data Ingestion with CoinCap API + Quality Gates
+- ✅ Phase I: Data Ingestion with CryptoCompare API + Quality Gates
 - ✅ Phase II: Model Training with MLflow + DagHub
 - ✅ Phase III: CI/CD with GitHub Actions + CML
 - ✅ Phase IV: Monitoring with Prometheus + Grafana
@@ -37,7 +37,7 @@ This is a **production-ready, complete MLOps pipeline** for cryptocurrency volat
 ## 🎯 Key Features
 
 ### ✨ Production-Ready
-- Real API integration (CoinCap with your key)
+- Real API integration (CryptoCompare - Free, no key required)
 - Quality gates that actually fail pipeline
 - Time-series aware ML
 - Containerized deployment
@@ -75,8 +75,8 @@ cd /mnt/user-data/outputs/mlops-rps-crypto
 # Copy environment template
 cp .env.example .env
 
-# Edit .env and add your API key (already included):
-# COINCAP_API_KEY=bb3aff5cf39fcdb0348872abb812aa2cbaa34c5a9e61e024d6a0573597f753ba
+# Edit .env and configure data source (CryptoCompare is free, no key needed):
+# DATA_SOURCE=cryptocompare
 ```
 
 ### Step 2: Create DagHub Account (2 minutes)
@@ -118,7 +118,7 @@ After setup, access these URLs:
 
 | Service | URL | Credentials | Purpose |
 |---------|-----|-------------|---------|
-| **Airflow** | http://localhost:8080 | admin / admin | Pipeline orchestration |
+| **Airflow** | http://localhost:8081 | admin / admin | Pipeline orchestration (Port 8081 if 8080 is in use) |
 | **MinIO** | http://localhost:9001 | minioadmin / minioadmin123 | Data storage (S3) |
 | **Prometheus** | http://localhost:9090 | - | Metrics collection |
 | **Grafana** | http://localhost:3000 | admin / admin | Dashboards & alerts |
@@ -130,7 +130,7 @@ After setup, access these URLs:
 
 ### Phase I: Problem Definition & Data Ingestion ✅
 
-- [x] Selected API: **CoinCap API 2.0** (Not in excluded list)
+- [x] Selected API: **CryptoCompare API** (Free, no key required, reliable historical data)
 - [x] Real-time cryptocurrency data
 - [x] Predictive task: Bitcoin volatility prediction (1h ahead)
 - [x] Apache Airflow DAG implementation
@@ -190,7 +190,7 @@ mlops-rps-crypto/
 │
 ├── src/
 │   ├── data/
-│   │   ├── extract.py      # CoinCap API data extraction
+│   │   ├── extract.py      # CryptoCompare API data extraction
 │   │   ├── quality_check.py # Mandatory quality gates
 │   │   └── transform.py    # Feature engineering
 │   ├── models/
@@ -269,7 +269,7 @@ docker-compose logs -f api
 ## 🎬 Demo Workflow
 
 1. **Start Everything**: `./setup.sh` → Wait 5 minutes
-2. **Open Airflow**: http://localhost:8080 → Enable DAG
+2. **Open Airflow**: http://localhost:8081 (or 8080 if port is free) → Enable DAG
 3. **Trigger Pipeline**: Click "Trigger DAG" button
 4. **Watch Progress**: See tasks turn green
 5. **Check MLflow**: Your DagHub URL → See experiments
@@ -400,7 +400,7 @@ When running the complete pipeline:
 
 | Criterion | Implementation | Location |
 |-----------|---------------|----------|
-| **Data Ingestion** | CoinCap API with Airflow | `src/data/extract.py`, `airflow/dags/` |
+| **Data Ingestion** | CryptoCompare API with Airflow | `src/data/extract.py`, `airflow/dags/` |
 | **Quality Gates** | Strict validation with failure | `src/data/quality_check.py` |
 | **Feature Engineering** | 36 time-series features | `src/data/transform.py` |
 | **MLflow Tracking** | Complete experiment tracking | `src/models/train.py` |
@@ -456,9 +456,11 @@ This is a **complete, production-ready MLOps pipeline** that:
 - ✅ Is fully documented
 - ✅ Can be run in 5 minutes
 
-**Your API Key is Already Configured** in `.env.example`:
+**CryptoCompare API is Free** - No API key required! Configure in `.env`:
 ```
-COINCAP_API_KEY=bb3aff5cf39fcdb0348872abb812aa2cbaa34c5a9e61e024d6a0573597f753ba
+DATA_SOURCE=cryptocompare
+CRYPTO_ASSET=BTC
+CRYPTO_CURRENCY=USD
 ```
 
 Just add your DagHub credentials and you're ready to go! 🚀

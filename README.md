@@ -2,7 +2,7 @@
 
 ## 🎯 Project Overview
 
-A production-ready MLOps pipeline for predicting Bitcoin (BTC) price volatility using CoinCap API. This system implements:
+A production-ready MLOps pipeline for predicting Bitcoin (BTC) price volatility using CryptoCompare API (free tier). This system implements:
 - Automated data ingestion and quality checks
 - Continuous model training and versioning
 - CI/CD with automated model comparison
@@ -16,8 +16,8 @@ A production-ready MLOps pipeline for predicting Bitcoin (BTC) price volatility 
 
 ```
 ┌─────────────┐     ┌──────────────┐     ┌─────────────┐
-│  CoinCap    │────▶│   Airflow    │────▶│   MinIO     │
-│    API      │     │     DAG      │     │  (Storage)  │
+│ CryptoCompare│────▶│   Airflow    │────▶│   MinIO     │
+│    API       │     │     DAG      │     │  (Storage)  │
 └─────────────┘     └──────────────┘     └─────────────┘
                            │                      │
                            ▼                      ▼
@@ -59,93 +59,144 @@ A production-ready MLOps pipeline for predicting Bitcoin (BTC) price volatility 
 ```bash
 # Clone repository
 git clone <your-repo-url>
-cd mlops-rps-crypto
+cd Bitcoin-MLOPS
 
-# Create virtual environment
-conda create -n mlops-rps python=3.9 -y
-conda activate mlops-rps
+# Create virtual environment (optional, for local development)
+conda create -n mlops-crypto python=3.9 -y
+conda activate mlops-crypto
 
 # Install dependencies
 pip install -r requirements.txt
-
-# Initialize DVC
-dvc init
 ```
 
 ### 2. Configure Environment Variables
 
-Create `.env` file:
+Create `.env` file in the project root:
 
 ```bash
-# CoinCap API
-COINCAP_API_KEY=bb3aff5cf39fcdb0348872abb812aa2cbaa34c5a9e61e024d6a0573597f753ba
-
-# MinIO (Local S3)
-MINIO_ROOT_USER=minioadmin
-MINIO_ROOT_PASSWORD=minioadmin123
-MINIO_ENDPOINT=http://localhost:9000
+# CryptoCompare API (Free - No key required)
+DATA_SOURCE=cryptocompare
+CRYPTO_ASSET=BTC
+CRYPTO_CURRENCY=USD
 
 # MLflow (DagHub)
-MLFLOW_TRACKING_URI=https://dagshub.com/<your-username>/mlops-rps-crypto.mlflow
-MLFLOW_TRACKING_USERNAME=<your-dagshub-username>
-MLFLOW_TRACKING_PASSWORD=<your-dagshub-token>
+MLFLOW_TRACKING_URI=https://dagshub.com/zainulabidin776/bitcoin-price-predictor.mlflow
+MLFLOW_TRACKING_USERNAME=zainulabidin776
+MLFLOW_TRACKING_PASSWORD=4844315bd4005fdc92de947532a3ed2347d0028e
 
-# DVC Remote
-DVC_REMOTE_URL=s3://mlops-data
+# MinIO Configuration
+MINIO_ENDPOINT=localhost:9000
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin123
+MINIO_BUCKET=mlops-data
+MINIO_SECURE=false
+
+# Airflow Configuration
+AIRFLOW_HOME=/opt/airflow
+AIRFLOW__CORE__EXECUTOR=LocalExecutor
+AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+AIRFLOW__CORE__FERNET_KEY=81HqDtbqAywKSOumSha3BhWNOdQ26slT6K0YaZeZyPs=
+AIRFLOW__CORE__LOAD_EXAMPLES=False
+AIRFLOW__WEBSERVER__SECRET_KEY=z8kF2mN9pQ4rT7vX3cB6eH1jL5wY0aD8
+
+# API Server Configuration
+API_HOST=0.0.0.0
+API_PORT=8000
+API_WORKERS=4
+
+# Model Configuration
+MODEL_NAME=crypto-volatility-predictor
+MODEL_STAGE=Production
 ```
 
-### 3. Start Infrastructure
+### 3. Start Infrastructure with Docker Compose
 
 ```bash
-# Start all services (Airflow, MinIO, Prometheus, Grafana)
-docker-compose up -d
+# Navigate to project directory
+cd Bitcoin-MLOPS
 
-# Verify services
-docker-compose ps
+# Start all services (PostgreSQL, Airflow, MinIO, Prometheus, Grafana, FastAPI)
+docker compose up --build
+
+# Or run in detached mode
+docker compose up -d
+
+# Verify all services are running
+docker compose ps
 ```
+
+**Wait 2-3 minutes** for all services to initialize, especially Airflow init.
 
 **Access URLs:**
-- Airflow: http://localhost:8080 (admin/admin)
-- MinIO: http://localhost:9001 (minioadmin/minioadmin123)
-- Prometheus: http://localhost:9090
-- Grafana: http://localhost:3000 (admin/admin)
+- **Airflow**: http://localhost:8081 (admin/admin) - *Note: Port 8081 if 8080 is in use*
+- **MinIO Console**: http://localhost:9001 (minioadmin/minioadmin123)
+- **MinIO API**: http://localhost:9000
+- **Prometheus**: http://localhost:9090
+- **Grafana**: http://localhost:3000 (admin/admin)
+- **FastAPI**: http://localhost:8000/docs
 
-### 4. Setup DVC Remote
+### 4. Verify Services Are Running
 
 ```bash
+# Check all containers are healthy
+docker compose ps
+
+# Expected output: All services should show "Up" status
+# - postgres-1: Up (healthy)
+# - airflow-webserver-1: Up
+# - airflow-scheduler-1: Up
+# - airflow-init-1: Exited (0) - This is normal, init runs once
+# - minio-1: Up
+# - prometheus-1: Up
+# - grafana-1: Up
+# - api-1: Up
+
+# Check logs if any service fails
+docker compose logs <service-name>
+```
+
+### 5. Access Airflow UI and Enable DAG
+
+1. **Open Airflow UI**: http://localhost:8081 (or http://localhost:8080 if port 8080 is free)
+2. **Login**: Username: `admin`, Password: `admin`
+3. **Find DAG**: Look for `crypto_pipeline_dag` in the DAGs list
+4. **Enable DAG**: Toggle the switch to ON (blue)
+5. **Trigger DAG**: Click the "Play" button to run manually
+
+### 6. Test the Pipeline Locally (Optional)
+
+```bash
+# Activate conda environment
+conda activate mlops-crypto
+
+# Run data extraction (uses CryptoCompare API - free, no key needed)
+python src/data/extract.py
+
+# Run quality checks
+python src/data/quality_check.py
+
+# Transform features
+python src/data/transform.py
+
+# Train model
+python src/models/train.py
+```
+
+### 7. Setup DVC Remote (Optional)
+
+```bash
+# Initialize DVC (if not already done)
+dvc init
+
 # Configure DVC to use MinIO
 dvc remote add -d minio s3://mlops-data
 dvc remote modify minio endpointurl http://localhost:9000
 dvc remote modify minio access_key_id minioadmin
 dvc remote modify minio secret_access_key minioadmin123
 
-# Create bucket in MinIO (via UI or mc client)
-```
-
-### 5. Setup DagHub
-
-```bash
-# Login to dagshub.com and create new repo: mlops-rps-crypto
-# Add remote
-git remote add dagshub https://dagshub.com/<your-username>/mlops-rps-crypto.git
-
-# Configure MLflow
-export MLFLOW_TRACKING_URI=https://dagshub.com/<your-username>/mlops-rps-crypto.mlflow
-export MLFLOW_TRACKING_USERNAME=<your-username>
-export MLFLOW_TRACKING_PASSWORD=<your-token>
-```
-
-### 6. Run Initial Pipeline
-
-```bash
-# Trigger Airflow DAG manually
-# Go to http://localhost:8080
-# Enable and trigger: crypto_volatility_pipeline
-
-# Or run locally for testing
-python src/data/extract.py
-python src/data/transform.py
-python src/models/train.py
+# Create bucket in MinIO via UI: http://localhost:9001
+# Login: minioadmin/minioadmin123
+# Create bucket: mlops-data
 ```
 
 ---
@@ -372,42 +423,97 @@ curl -X POST http://localhost:8000/predict \
 
 ### Common Issues
 
-1. **Airflow DAG not showing**
-   - Check logs: `docker-compose logs airflow-webserver`
-   - Verify DAG syntax: `python airflow/dags/crypto_pipeline_dag.py`
+1. **Airflow webserver won't start - Port 8080 already in use**
+   ```bash
+   # Check what's using port 8080
+   netstat -ano | findstr :8080
+   
+   # Solution: Port is already mapped to 8081 in docker-compose.yml
+   # Access Airflow at: http://localhost:8081
+   # Or change the port mapping in docker-compose.yml if needed
+   ```
 
-2. **MLflow connection fails**
-   - Verify DagHub credentials in `.env`
-   - Check network connectivity
+2. **Airflow init container fails**
+   ```bash
+   # Check init logs
+   docker compose logs airflow-init
+   
+   # Common issue: _PIP_ADDITIONAL_REQUIREMENTS causing pip install failures
+   # Solution: Already fixed - _PIP_ADDITIONAL_REQUIREMENTS is commented out
+   # If you need those packages, build a custom Airflow image instead
+   ```
 
-3. **DVC push fails**
-   - Ensure MinIO is running
-   - Verify bucket exists
-   - Check credentials
+3. **Airflow DAG not showing**
+   ```bash
+   # Check scheduler logs
+   docker compose logs airflow-scheduler
+   
+   # Verify DAG file exists
+   ls airflow/dags/crypto_pipeline_dag.py
+   
+   # Restart scheduler
+   docker compose restart airflow-scheduler
+   ```
 
-4. **API returns 500 error**
-   - Check model is loaded: view logs
-   - Verify input feature format
-   - Ensure MLflow model exists
+4. **MLflow connection fails**
+   ```bash
+   # Verify DagHub credentials in .env file
+   # Test connection
+   python -c "import mlflow; mlflow.set_tracking_uri('https://dagshub.com/zainulabidin776/bitcoin-price-predictor.mlflow'); print('Connected')"
+   ```
 
-### Logs
+5. **DVC push fails**
+   ```bash
+   # Ensure MinIO is running
+   docker compose ps minio
+   
+   # Verify bucket exists via MinIO UI: http://localhost:9001
+   # Check credentials in .env
+   ```
+
+6. **API returns 500 error or "No model found"**
+   ```bash
+   # Check API logs
+   docker compose logs api
+   
+   # This is expected if no model has been trained yet
+   # Train a model first via Airflow DAG or locally
+   python src/models/train.py
+   ```
+
+7. **Services won't start**
+   ```bash
+   # Stop all services
+   docker compose down
+   
+   # Remove volumes (WARNING: deletes data)
+   docker compose down -v
+   
+   # Start fresh
+   docker compose up --build
+   ```
+
+### Viewing Logs
 
 ```bash
-# Airflow logs
-docker-compose logs airflow-scheduler
+# All services
+docker compose logs
 
-# API logs
-docker-compose logs api
+# Specific service
+docker compose logs airflow-scheduler
+docker compose logs airflow-webserver
+docker compose logs api
+docker compose logs postgres
 
-# Prometheus logs
-docker-compose logs prometheus
+# Follow logs in real-time
+docker compose logs -f airflow-scheduler
 ```
 
 ---
 
 ## 📚 Additional Resources
 
-- [CoinCap API Docs](https://docs.coincap.io/)
+- [CryptoCompare API Docs](https://min-api.cryptocompare.com/documentation)
 - [Apache Airflow Docs](https://airflow.apache.org/docs/)
 - [MLflow Documentation](https://mlflow.org/docs/latest/index.html)
 - [DVC Documentation](https://dvc.org/doc)

@@ -1,5 +1,6 @@
 """
 Unit tests for data extraction module
+Tests CryptoCompare API extractor (free, no key required)
 """
 
 import pytest
@@ -12,71 +13,79 @@ import sys
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
-from data.extract import CoinCapExtractor
+from data.extract import CryptoCompareExtractor
 
 
-class TestCoinCapExtractor:
-    """Test cases for CoinCapExtractor"""
+class TestCryptoCompareExtractor:
+    """Test cases for CryptoCompareExtractor"""
     
     @pytest.fixture
     def extractor(self):
         """Create extractor instance"""
-        return CoinCapExtractor()
+        return CryptoCompareExtractor()
     
     @pytest.fixture
-    def mock_api_response(self):
-        """Mock API response data"""
+    def mock_price_response(self):
+        """Mock current price API response"""
         return {
-            'data': {
-                'id': 'bitcoin',
-                'rank': '1',
-                'symbol': 'BTC',
-                'name': 'Bitcoin',
-                'priceUsd': '50000.123456',
-                'marketCapUsd': '1000000000000',
-                'volumeUsd24Hr': '20000000000',
-                'changePercent24Hr': '2.5'
-            }
+            'USD': 87696.36
         }
     
     @pytest.fixture
     def mock_historical_response(self):
-        """Mock historical data response"""
+        """Mock historical data response from CryptoCompare"""
         return {
-            'data': [
-                {
-                    'priceUsd': '50000.00',
-                    'time': 1699900000000,
-                    'date': '2023-11-14T00:00:00.000Z'
-                },
-                {
-                    'priceUsd': '50100.00',
-                    'time': 1699900300000,
-                    'date': '2023-11-14T00:05:00.000Z'
-                }
-            ]
+            'Response': 'Success',
+            'Type': 100,
+            'Data': {
+                'Data': [
+                    {
+                        'time': 1699900000,
+                        'open': 50000.00,
+                        'high': 50100.00,
+                        'low': 49900.00,
+                        'close': 50050.00,
+                        'volumefrom': 100.5,
+                        'volumeto': 5025125.00
+                    },
+                    {
+                        'time': 1699903600,
+                        'open': 50050.00,
+                        'high': 50150.00,
+                        'low': 50000.00,
+                        'close': 50100.00,
+                        'volumefrom': 105.2,
+                        'volumeto': 5270520.00
+                    }
+                ]
+            }
         }
     
     def test_initialization(self, extractor):
         """Test extractor initialization"""
-        assert extractor.api_key is not None
-        assert extractor.base_url is not None
-        assert extractor.asset == 'bitcoin'
-        assert extractor.raw_data_dir.exists()
+        assert extractor.base_url == "https://min-api.cryptocompare.com/data"
+        assert extractor.asset == "BTC"
+        assert extractor.currency == "USD"
+        assert extractor.requests_made == 0
+        # CryptoCompare doesn't need API key
+        assert hasattr(extractor, 'base_url')
     
     @patch('requests.get')
-    def test_fetch_current_price_success(self, mock_get, extractor, mock_api_response):
+    def test_fetch_current_price_success(self, mock_get, extractor, mock_price_response):
         """Test successful current price fetch"""
         mock_response = Mock()
-        mock_response.json.return_value = mock_api_response
+        mock_response.json.return_value = mock_price_response
+        mock_response.status_code = 200
         mock_response.raise_for_status = Mock()
         mock_get.return_value = mock_response
         
         result = extractor.fetch_current_price()
         
         assert result is not None
-        assert result['id'] == 'bitcoin'
-        assert 'priceUsd' in result
+        assert 'price_usd' in result
+        assert 'symbol' in result
+        assert result['price_usd'] == 87696.36
+        assert result['symbol'] == 'BTC'
         mock_get.assert_called_once()
     
     @patch('requests.get')
@@ -84,96 +93,83 @@ class TestCoinCapExtractor:
         """Test failed current price fetch"""
         mock_get.side_effect = Exception("API Error")
         
-        with pytest.raises(Exception):
-            extractor.fetch_current_price()
+        result = extractor.fetch_current_price()
+        
+        assert result is None
     
     @patch('requests.get')
     def test_fetch_historical_data_success(self, mock_get, extractor, mock_historical_response):
         """Test successful historical data fetch"""
         mock_response = Mock()
         mock_response.json.return_value = mock_historical_response
+        mock_response.status_code = 200
         mock_response.raise_for_status = Mock()
         mock_get.return_value = mock_response
         
-        result = extractor.fetch_historical_data(interval='m5', days=1)
+        result = extractor.fetch_historical_data(days=1)
         
         assert isinstance(result, pd.DataFrame)
         assert len(result) == 2
-        assert 'priceUsd' in result.columns
-        assert 'date' in result.columns
+        assert 'timestamp' in result.columns
+        assert 'open' in result.columns
+        assert 'high' in result.columns
+        assert 'low' in result.columns
+        assert 'close' in result.columns
+        assert 'volume' in result.columns
+        assert 'volume_usd' in result.columns
     
     @patch('requests.get')
-    def test_fetch_market_data_success(self, mock_get, extractor, mock_api_response):
-        """Test successful market data fetch"""
+    def test_fetch_historical_data_failure(self, mock_get, extractor):
+        """Test failed historical data fetch"""
         mock_response = Mock()
-        mock_response.json.return_value = {'data': [mock_api_response['data']]}
+        mock_response.json.return_value = {'Response': 'Error', 'Message': 'API Error'}
+        mock_response.status_code = 200
         mock_response.raise_for_status = Mock()
         mock_get.return_value = mock_response
         
-        result = extractor.fetch_market_data()
+        result = extractor.fetch_historical_data(days=1)
         
-        assert result is not None
-        assert result['id'] == 'bitcoin'
+        assert result is None
     
-    @patch('requests.get')
-    def test_validate_api_connection_success(self, mock_get, extractor, mock_api_response):
-        """Test successful API validation"""
-        mock_response = Mock()
-        mock_response.json.return_value = mock_api_response
-        mock_response.raise_for_status = Mock()
-        mock_get.return_value = mock_response
-        
-        result = extractor.validate_api_connection()
-        
-        assert result is True
-    
-    @patch('requests.get')
-    def test_validate_api_connection_failure(self, mock_get, extractor):
-        """Test failed API validation"""
-        mock_get.side_effect = Exception("Connection Error")
-        
-        result = extractor.validate_api_connection()
-        
-        assert result is False
-    
-    @patch.object(CoinCapExtractor, 'fetch_current_price')
-    @patch.object(CoinCapExtractor, 'fetch_historical_data')
-    @patch.object(CoinCapExtractor, 'fetch_market_data')
+    @patch.object(CryptoCompareExtractor, 'fetch_current_price')
+    @patch.object(CryptoCompareExtractor, 'fetch_historical_data')
     def test_extract_and_save(
         self,
-        mock_market,
         mock_historical,
         mock_current,
         extractor,
-        mock_api_response,
+        mock_price_response,
         mock_historical_response
     ):
         """Test complete extract and save process"""
         # Setup mocks
-        mock_current.return_value = mock_api_response['data']
-        mock_market.return_value = mock_api_response['data']
+        mock_current.return_value = {'price_usd': 87696.36, 'symbol': 'BTC'}
         
         # Create DataFrame from mock data
-        df = pd.DataFrame(mock_historical_response['data'])
-        df['date'] = pd.to_datetime(df['date'])
-        df['priceUsd'] = df['priceUsd'].astype(float)
+        df = pd.DataFrame(mock_historical_response['Data']['Data'])
+        df['timestamp'] = pd.to_datetime(df['time'], unit='s')
+        df = df.rename(columns={
+            'volumefrom': 'volume',
+            'volumeto': 'volume_usd'
+        })
+        df = df[['timestamp', 'open', 'high', 'low', 'close', 'volume', 'volume_usd']]
         mock_historical.return_value = df
         
-        # Execute
-        output_path = extractor.extract_and_save()
-        
-        # Verify
-        assert output_path is not None
-        assert Path(output_path).exists()
-        assert Path(output_path).suffix == '.csv'
-        
-        # Cleanup
-        Path(output_path).unlink()
-        # Also remove JSON metadata
-        json_file = Path(output_path).parent / Path(output_path).stem.replace('crypto_raw', 'extraction_metadata')
-        json_file = json_file.with_suffix('.json')
-        if json_file.exists():
-            json_file.unlink()
+        # Create temp directory for output
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Execute
+            output_path = extractor.extract_and_save(output_dir=tmpdir)
+            
+            # Verify
+            assert output_path is not None
+            assert Path(output_path).exists()
+            assert Path(output_path).suffix == '.csv'
+            
+            # Verify CSV content
+            saved_df = pd.read_csv(output_path)
+            assert len(saved_df) == 2
+            assert 'timestamp' in saved_df.columns
 
 
 if __name__ == "__main__":

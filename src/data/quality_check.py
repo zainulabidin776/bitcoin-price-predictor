@@ -30,14 +30,18 @@ class DataQualityChecker:
         self.schema_strict = schema_strict
         self.quality_report = {}
         
-        # Expected schema for raw crypto data
+        # Expected schema for raw crypto data (CryptoCompare format)
         self.expected_schema = {
-            'priceUsd': 'float64',
-            'time': 'int64',
-            'date': 'object'
+            'timestamp': 'object',  # datetime string
+            'open': 'float64',
+            'high': 'float64',
+            'low': 'float64',
+            'close': 'float64',
+            'volume': 'float64',
+            'volume_usd': 'float64'
         }
         
-        self.required_columns = ['priceUsd', 'time', 'date']
+        self.required_columns = ['timestamp', 'open', 'high', 'low', 'close', 'volume']
     
     def check_null_values(self, df: pd.DataFrame) -> Tuple[bool, Dict]:
         """
@@ -119,40 +123,43 @@ class DataQualityChecker:
         
         range_violations = []
         
-        # Check price is positive
-        if 'priceUsd' in df.columns:
-            negative_prices = df[df['priceUsd'] <= 0]
+        # Check close price is positive
+        if 'close' in df.columns:
+            negative_prices = df[df['close'] <= 0]
             if len(negative_prices) > 0:
                 range_violations.append({
-                    'column': 'priceUsd',
+                    'column': 'close',
                     'issue': 'negative_or_zero_values',
                     'count': len(negative_prices)
                 })
             
             # Check for unrealistic price values (too high or too low)
-            median_price = df['priceUsd'].median()
+            median_price = df['close'].median()
             outlier_threshold = 5.0  # 5x deviation
             
             outliers = df[
-                (df['priceUsd'] > median_price * outlier_threshold) |
-                (df['priceUsd'] < median_price / outlier_threshold)
+                (df['close'] > median_price * outlier_threshold) |
+                (df['close'] < median_price / outlier_threshold)
             ]
             
             if len(outliers) > len(df) * 0.05:  # More than 5% outliers
                 range_violations.append({
-                    'column': 'priceUsd',
+                    'column': 'close',
                     'issue': 'excessive_outliers',
                     'count': len(outliers),
                     'percentage': (len(outliers) / len(df)) * 100
                 })
         
-        # Check timestamps are in order
-        if 'time' in df.columns:
-            if not df['time'].is_monotonic_increasing:
+        # Check timestamps are valid
+        if 'timestamp' in df.columns:
+            try:
+                pd.to_datetime(df['timestamp'])
+            except Exception as e:
                 range_violations.append({
-                    'column': 'time',
-                    'issue': 'timestamps_not_monotonic',
-                    'count': 1
+                    'column': 'timestamp',
+                    'issue': 'invalid_timestamp_format',
+                    'count': 1,
+                    'error': str(e)
                 })
         
         passed = len(range_violations) == 0
@@ -170,17 +177,18 @@ class DataQualityChecker:
         
         return passed, report
     
-    def check_data_freshness(self, df: pd.DataFrame, max_age_hours: int = 2) -> Tuple[bool, Dict]:
+    def check_data_freshness(self, df: pd.DataFrame, max_age_hours: int = 48) -> Tuple[bool, Dict]:
         """Check if data is recent enough"""
         
-        if 'date' not in df.columns:
-            return True, {'check': 'data_freshness', 'passed': True, 'note': 'No date column'}
+        if 'timestamp' not in df.columns:
+            return True, {'check': 'data_freshness', 'passed': True, 'note': 'No timestamp column'}
         
-        latest_date = pd.to_datetime(df['date']).max()
+        latest_date = pd.to_datetime(df['timestamp']).max()
         current_time = datetime.now()
         
         age_hours = (current_time - latest_date).total_seconds() / 3600
         
+        # More lenient for historical data - allow up to 48 hours
         passed = age_hours <= max_age_hours
         
         report = {

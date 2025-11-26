@@ -1,6 +1,6 @@
 FROM python:3.9-slim
 
-LABEL maintainer="MLOps Team <team@example.com>"
+LABEL maintainer="MLOps Team itsmezayynn@gmail.com"
 LABEL description="Crypto Volatility Prediction API"
 
 # Set working directory
@@ -37,3 +37,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 
 # Run application
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+

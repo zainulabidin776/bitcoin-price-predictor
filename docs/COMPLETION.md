@@ -21,7 +21,7 @@
 - ✅ `.gitignore` - Git ignore patterns
 
 ### 🐍 Python Source Code (5 files)
-- ✅ `src/data/extract.py` (250 lines) - CoinCap API integration
+- ✅ `src/data/extract.py` (250 lines) - CryptoCompare API integration
 - ✅ `src/data/quality_check.py` (300 lines) - Mandatory quality gates
 - ✅ `src/data/transform.py` (400 lines) - Feature engineering
 - ✅ `src/models/train.py` (350 lines) - Model training with MLflow
@@ -61,7 +61,7 @@
 | Requirement | Status | Implementation |
 |------------|--------|----------------|
 | Select real-world problem with time-series data | ✅ | Bitcoin volatility prediction |
-| Use free, live external API | ✅ | CoinCap API 2.0 |
+| Use free, live external API | ✅ | CryptoCompare API (Free tier) |
 | Apache Airflow DAG implementation | ✅ | `crypto_pipeline_dag.py` |
 | Python operator for API connection | ✅ | `extract.py` |
 | Raw data saved with timestamp | ✅ | `data/raw/crypto_raw_*.csv` |
@@ -243,7 +243,7 @@ docker-compose logs api
 ```
 
 ### Access URLs
-- Airflow: http://localhost:8080 (admin/admin)
+- Airflow: http://localhost:8081 (admin/admin) - *Note: Port 8081 if 8080 is in use*
 - MinIO: http://localhost:9001 (minioadmin/minioadmin123)
 - Prometheus: http://localhost:9090
 - Grafana: http://localhost:3000 (admin/admin)
@@ -298,7 +298,7 @@ This project represents a **complete, production-ready MLOps system** that:
 ✨ Monitors performance in real-time  
 ✨ Prevents bad models from deploying  
 
-**Your CoinCap API key is already included and configured!**
+**CryptoCompare API is free and requires no API key!**
 
 Just run `./setup.sh` and you're ready to go! 🚀
 

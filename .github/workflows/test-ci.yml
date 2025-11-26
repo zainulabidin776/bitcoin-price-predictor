@@ -37,9 +37,9 @@ jobs:
       
       - name: Extract data
         env:
-          COINCAP_API_KEY: ${{ secrets.COINCAP_API_KEY }}
+          DATA_SOURCE: cryptocompare
         run: |
-          echo "Extracting data from CoinCap API..."
+          echo "Extracting data from CryptoCompare API (Free - No key required)..."
           python src/data/extract.py
       
       - name: Quality check
