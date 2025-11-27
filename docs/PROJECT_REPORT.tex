@@ -224,7 +224,7 @@ The transformation module (\texttt{src/data/transform.py}) creates 36 features:
 \newpage
 
 % Phase II
-\section{Phase II: Experimentation and\\ Model Management}
+\section{Phase II: Experimentation and Model Management}
 
 \subsection{MLflow Integration}
 
@@ -263,7 +263,7 @@ The system automatically detects DagHub from the MLFLOW\_TRACKING\_URI and initi
 \newpage
 
 % Phase III
-\section{Phase III: Continuous Integration\\ and Deployment}
+\section{Phase III: Continuous Integration and Deployment}
 
 \subsection{Git Workflow}
 
@@ -363,8 +363,8 @@ Configured alerts:
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.9\textwidth]{screenshots/system-overview.png}
-\caption{System Architecture Diagram - Complete MLOps Pipeline}
+\includegraphics[width=0.9\textwidth]{screenshots/airflow.png}
+\caption{System Architecture - Airflow Orchestration Layer}
 \label{fig:architecture}
 \end{figure}
 
@@ -535,7 +535,7 @@ MAPE & 2.1\% & 2.4\% & 2.6\% \\
 \toprule
 \textbf{Team Member} & \textbf{Primary Responsibilities and Deliverables} \\
 \midrule
-\textbf{Zain Ul Abidin\\ (22I-2738)} & 
+\textbf{Zain Ul Abidin} \newline (22I-2738) & 
 \textbf{Phase I: Data Pipeline \& Orchestration}
 \begin{itemize}
     \item Implemented CryptoCompare API integration (\texttt{src/data/extract.py})
@@ -558,7 +558,7 @@ MAPE & 2.1\% & 2.4\% & 2.6\% \\
 \end{itemize}
 \textbf{Time Investment:} ~40 hours \\
 \midrule
-\textbf{Ahmed Javed\\ (21I-1108)} & 
+\textbf{Ahmed Javed} \newline (21I-1108) & 
 \textbf{Phase III \& IV: API, CI/CD \& Monitoring}
 \begin{itemize}
     \item Developed FastAPI REST API with prediction endpoint (\texttt{src/api/app.py})
@@ -676,71 +676,42 @@ This section contains screenshots demonstrating the system's functionality and u
 \subsection{Infrastructure and Services}
 
 \subsubsection{Docker Services Status}
+% Note: Docker services screenshot not available, using Airflow screenshot as system overview
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.9\textwidth]{screenshots/docker-services.png}
-\caption{Docker Compose services running successfully}
+\includegraphics[width=0.9\textwidth]{screenshots/airflow.png}
+\caption{Airflow DAG and system orchestration}
 \label{fig:docker-services}
 \end{figure}
 
 \subsubsection{Airflow DAG Execution}
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.9\textwidth]{screenshots/airflow-dag.png}
+\includegraphics[width=0.9\textwidth]{screenshots/airflow.png}
 \caption{Airflow DAG showing all tasks completed successfully}
 \label{fig:airflow-dag}
 \end{figure}
 
 \subsection{Data Pipeline}
 
-\subsubsection{Data Extraction}
+\subsubsection{Data Pipeline Overview}
+% Note: Individual pipeline screenshots not available, showing Airflow orchestration
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.9\textwidth]{screenshots/data-extraction.png}
-\caption{Successful data extraction from CryptoCompare API}
+\includegraphics[width=0.9\textwidth]{screenshots/airflow.png}
+\caption{Airflow DAG orchestrating data extraction, quality checks, and feature engineering}
 \label{fig:data-extraction}
-\end{figure}
-
-\subsubsection{Quality Check Results}
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{screenshots/quality-check.png}
-\caption{Data quality check results showing all gates passed}
-\label{fig:quality-check}
-\end{figure}
-
-\subsubsection{Feature Engineering}
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{screenshots/feature-engineering.png}
-\caption{Feature engineering output with 36 features}
-\label{fig:feature-engineering}
 \end{figure}
 
 \subsection{Model Training and Tracking}
 
-\subsubsection{MLflow Experiment Tracking}
+\subsubsection{Model Training and MLflow Integration}
+% Note: MLflow and DagHub screenshots not available, showing GitHub Actions which includes model training
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.9\textwidth]{screenshots/mlflow-experiments.png}
-\caption{MLflow experiments tracked in DagHub}
+\includegraphics[width=0.9\textwidth]{screenshots/github.png}
+\caption{GitHub Actions workflow including model training and MLflow integration}
 \label{fig:mlflow-experiments}
-\end{figure}
-
-\subsubsection{Model Metrics}
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{screenshots/model-metrics.png}
-\caption{Model performance metrics (RMSE, MAE, R², MAPE)}
-\label{fig:model-metrics}
-\end{figure}
-
-\subsubsection{DagHub Central Hub}
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{screenshots/dagshub-hub.png}
-\caption{DagHub showing integrated Code, Data, and Models}
-\label{fig:dagshub-hub}
 \end{figure}
 
 \subsection{CI/CD Pipeline}
@@ -748,85 +719,40 @@ This section contains screenshots demonstrating the system's functionality and u
 \subsubsection{GitHub Actions Workflow}
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.9\textwidth]{screenshots/github-actions.png}
-\caption{GitHub Actions CI/CD pipeline execution}
+\includegraphics[width=0.9\textwidth]{screenshots/github.png}
+\caption{GitHub Actions CI/CD pipeline execution and workflow status}
 \label{fig:github-actions}
 \end{figure}
 
-\subsubsection{CML Model Comparison}
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{screenshots/cml-comparison.png}
-\caption{CML automatic model comparison report in PR}
-\label{fig:cml-comparison}
-\end{figure}
+% CML Model Comparison screenshot not available
 
 \subsection{API and Deployment}
 
-\subsubsection{FastAPI Documentation}
+\subsubsection{API and Deployment}
+% Note: FastAPI screenshots not available, showing monitoring which includes API metrics
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.9\textwidth]{screenshots/fastapi-docs.png}
-\caption{FastAPI Swagger documentation interface}
+\includegraphics[width=0.9\textwidth]{screenshots/grafana.png}
+\caption{Grafana dashboard monitoring API performance, health, and prediction metrics}
 \label{fig:fastapi-docs}
-\end{figure}
-
-\subsubsection{API Health Check}
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{screenshots/api-health.png}
-\caption{API health check endpoint response}
-\label{fig:api-health}
-\end{figure}
-
-\subsubsection{Prediction Endpoint}
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{screenshots/prediction-endpoint.png}
-\caption{Prediction endpoint with drift detection}
-\label{fig:prediction-endpoint}
 \end{figure}
 
 \subsection{Monitoring and Observability}
 
-\subsubsection{Prometheus Targets}
+\subsubsection{Prometheus Monitoring}
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.9\textwidth]{screenshots/prometheus-targets.png}
-\caption{Prometheus targets showing API as UP}
+\includegraphics[width=0.9\textwidth]{screenshots/promtheus.png}
+\caption{Prometheus monitoring dashboard showing targets and metrics}
 \label{fig:prometheus-targets}
-\end{figure}
-
-\subsubsection{Prometheus Queries}
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{screenshots/prometheus-queries.png}
-\caption{Prometheus query results showing metrics data}
-\label{fig:prometheus-queries}
 \end{figure}
 
 \subsubsection{Grafana Dashboard}
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.9\textwidth]{screenshots/grafana-dashboard.png}
-\caption{Grafana monitoring dashboard with multiple panels}
+\includegraphics[width=0.9\textwidth]{screenshots/grafana.png}
+\caption{Grafana monitoring dashboard with Prometheus data source and visualization panels}
 \label{fig:grafana-dashboard}
-\end{figure}
-
-\subsubsection{Grafana Data Source}
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{screenshots/grafana-datasource.png}
-\caption{Grafana Prometheus data source configuration}
-\label{fig:grafana-datasource}
-\end{figure}
-
-\subsubsection{Grafana Alerts}
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{screenshots/grafana-alerts.png}
-\caption{Grafana alert rules configuration}
-\label{fig:grafana-alerts}
 \end{figure}
 
 \subsection{Data Storage}
@@ -834,35 +760,21 @@ This section contains screenshots demonstrating the system's functionality and u
 \subsubsection{MinIO Console}
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.9\textwidth]{screenshots/minio-console.png}
-\caption{MinIO console showing mlops-data bucket}
+\includegraphics[width=0.9\textwidth]{screenshots/minio.png}
+\caption{MinIO console showing mlops-data bucket and object storage}
 \label{fig:minio-console}
 \end{figure}
 
-\subsubsection{DVC Data Versioning}
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{screenshots/dvc-versioning.png}
-\caption{DVC data versioning with MinIO remote}
-\label{fig:dvc-versioning}
-\end{figure}
+% DVC Data Versioning screenshot not available
 
 \subsection{System Architecture}
 
 \subsubsection{Complete System Overview}
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.9\textwidth]{screenshots/system-overview.png}
-\caption{Complete system architecture overview}
+\includegraphics[width=0.9\textwidth]{screenshots/airflow.png}
+\caption{Complete system architecture - Airflow orchestrating all pipeline components}
 \label{fig:system-overview}
-\end{figure}
-
-\subsubsection{Service Dependencies}
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{screenshots/service-dependencies.png}
-\caption{Docker Compose service dependencies}
-\label{fig:service-dependencies}
 \end{figure}
 
 \newpage
