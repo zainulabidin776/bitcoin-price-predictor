@@ -20,13 +20,15 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
+# Create necessary directories first
+RUN mkdir -p /app/models /app/outputs
+
 # Copy application code
 COPY src/api/ /app/
 COPY src/ /app/src/
-COPY models/ /app/models/
 
-# Create necessary directories
-RUN mkdir -p /app/models /app/outputs
+# Note: Models are loaded from MLflow at runtime, not copied into the image
+# The /app/models directory is created above for runtime model storage
 
 # Expose port
 EXPOSE 8000
